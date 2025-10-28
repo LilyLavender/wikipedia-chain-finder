@@ -150,18 +150,27 @@ async function fetchIncomingLinks(title, maxPerPage = 500) {
   return Array.from(results);
 }
 
-// Check if a page exists on Wikipedia
-async function pageExists(title) {
-  const url = `${apiEndpoint}&action=query&titles=${encodeURIComponent(title)}&format=json`;
+// Get the canonical title of a Wikipedia page (capitalization)
+async function getCanonicalTitle(title) {
+  const url = `${apiEndpoint}&action=query&titles=${encodeURIComponent(title)}&redirects=1`;
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`Network error ${resp.status}`);
   const data = await resp.json();
+
   if (data.query && data.query.pages) {
-    const pages = data.query.pages;
-    const first = Object.values(pages)[0];
-    return !!first.pageid;
+    const pages = Object.values(data.query.pages);
+    const first = pages[0];
+    if (first.missing) return null;
+    // The API returns the normalized / redirected title in .title
+    return first.title;
   }
-  return false;
+  return null;
+}
+
+// Check if a page exists on Wikipedia
+async function pageExists(title) {
+  const canonical = await getCanonicalTitle(title);
+  return canonical;
 }
 
 // Bidirectional BFS main funct
@@ -313,32 +322,28 @@ $('startBtn').addEventListener('click', async () => {
 
   // Make sure pages exist
   log(`[i] Checking if pages exist...`);
-  console.log("test1");
-  const [startExists, targetExists] = await Promise.all([
+  const [canonicalStart, canonicalTarget] = await Promise.all([
     pageExists(start),
     pageExists(target)
   ]);
 
-  console.log("test1");
-  
-  if (!startExists || !targetExists) {
-    console.log("test2");
+  if (!canonicalStart || !canonicalTarget) {
     let msg = 'Error:\n';
-    if (!startExists) msg += `• "${start}" does not exist on Wikipedia.\n`;
-    if (!targetExists) msg += `• "${target}" does not exist on Wikipedia.\n`;
+    if (!canonicalStart) msg += `• "${start}" does not exist on Wikipedia.\n`;
+    if (!canonicalTarget) msg += `• "${target}" does not exist on Wikipedia.\n`;
     alert(msg);
     $('startBtn').disabled = false;
     $('stopBtn').disabled = true;
     return;
   }
 
-  log(`Normalized titles:`);
-  log(`  Source: "${start}"`);
-  log(`  Target: "${target}"`);
+  log(`[i] Using canonical titles:\n  Source → "${canonicalStart}"\n  Target → "${canonicalTarget}"`);
+  const startCanonical = canonicalStart;
+  const targetCanonical = canonicalTarget;
   startTime = Date.now();
 
   try {
-    let res = await bidirectionalSearch(start, target, { maxDepth, maxNodes, blacklist });
+    let res = await bidirectionalSearch(startCanonical, targetCanonical, { maxDepth, maxNodes, blacklist });
 
     while (res.path) {
       const verification = await verifyChain(res.path);
