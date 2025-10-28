@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <title>Wikipedia Chain Finder</title>
+  <meta name="description" content="Find the shortest chain of links connecting two Wikipedia articles using a bidirectional search." />
+  <meta name="keywords" content="Wikipedia, link path, wiki race, wiki game, degrees of Wikipedia, shortest path, Wikipedia Chain Finder" />
+  <meta name="author" content="Lily" />
+  <meta name="robots" content="index, follow" />
+
+  <link rel="canonical" href="https://lilylavender.github.io/wikipedia-chain-finder/" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Wikipedia Chain Finder" />
+  <meta property="og:description" content="Find the shortest path between two Wikipedia articles." />
+  <meta property="og:url" content="https://lilylavender.github.io/wikipedia-chain-finder/" />
+  <meta property="og:site_name" content="Wikipedia Chain Finder" />
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Wikipedia Chain Finder" />
+  <meta name="twitter:description" content="Find the shortest path between two Wikipedia articles." />
+
+  <link rel="icon" type="image/png" href="https://en.wikipedia.org/static/favicon/wikipedia.ico" />
+
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="about-banner" id="aboutBanner">
+    <div class="about-toggle" id="aboutToggle">About</div>
+    <div class="about-content" id="aboutContent">
+      <p><strong>Wikipedia Chain Finder</strong><br>
+      Hi all! I'm Lily, a web & software developer from Milwaukee.<br><br>
+      I made this site in a couple days for fun, just to see if I could.<br><br>
+      If anyone finds any issues, feel free to <a href="https://github.com/LilyLavender/wikipedia-chain-finder/issues/new" target="_blank">submit one</a> to help me out.<br><br>
+      I make all of my projects purely for fun, so I would greatly appreciate if you could...
+      <a href="https://ko-fi.com/lilylambda" target="_blank" rel="noopener">
+        <img src="https://cdn.prod.website-files.com/5c14e387dab576fe667689cf/670f5a0171bfb928b21a7e00_support_me_on_kofi_beige.png"
+             alt="Support me on Ko-fi">
+      </a>
+    </div>
+  </header>
+  
+  <h1>Wikipedia Chain Finder</h1>
+  <div>
+    <p>
+      Enter two Wikipedia article links or titles. The site runs a bidirectional breadth-first search from the source to the
+      destination article.
+    </p>
+  </div>
+
+  <label for="source">Source article</label>
+  <input id="source" type="text" placeholder="e.g. Hatsune Miku" />
+
+  <label for="target">Destination article</label>
+  <input id="target" type="text" placeholder="e.g. https://en.wikipedia.org/wiki/Great_Pyramid_of_Giza" />
+
+  <div class="controls">
+    <label class="muted">Max depth (each side): <input id="maxDepth" type="number" value="6" min="1" style="width:72px; margin-left:6px;" /></label>
+    <label class="muted">Max nodes (total): <input id="maxNodes" type="number" value="2000" min="100" style="width:120px; margin-left:6px;" /></label>
+    <label class="muted"><input id="includeInfobox" type="checkbox" checked /> Include Infobox links</label>
+    <label class="muted"><input id="includeNavbox" type="checkbox" /> Include Navbox links</label>
+    <button id="startBtn">Start search</button>
+    <button id="stopBtn" disabled>Stop</button>
+  </div>
+
+  <div class="row" style="margin-top:12px;">
+    <div class="stat">Visited: <span id="visitedCount">0</span></div>
+    <div class="stat">Frontier (F/B): <span id="frontSizes">0 / 0</span></div>
+    <div class="stat">Meet node: <span id="meetNode">—</span></div>
+    <div class="stat">Elapsed: <span id="elapsed">0s</span></div>
+  </div>
+
+  <div id="log" aria-live="polite"></div>
+
+  <div id="result"></div>
+
+  <footer>
+    <p>Made by Lily, 2025. Uses the English Wikipedia API. Limits & rate-limits may apply. Report bugs to the <a href="https://github.com/LilyLavender/wikipedia-chain-finder">GitHub page</a>.</p>
+  </footer>
+
+  <script src="./script.js"></script>
+</body>
+</html>

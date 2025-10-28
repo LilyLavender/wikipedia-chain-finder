@@ -1,0 +1,147 @@
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+  margin: 0 auto;
+  max-width: 1000px;
+}
+
+h1 {
+  margin-bottom: 6px;
+}
+
+label {
+  display: block;
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 8px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+button {
+  padding: 10px 14px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#log {
+  margin-top: 14px;
+  background: #f7f7f7;
+  padding: 10px;
+  border-radius: 6px;
+  height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-family: monospace;
+}
+
+#result {
+  margin-top: 14px;
+  padding: 10px;
+  background: #eef6ff;
+  border-radius: 6px;
+}
+
+small {
+  color: #666;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.stat {
+  margin-right: 12px;
+  color: #333;
+}
+
+.muted {
+  color: #666;
+}
+
+footer {
+  margin: 18px auto;
+  color: #666;
+  font-size: 13px;
+  width: fit-content;
+}
+
+/* ABOUT */
+.about-banner {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  font-size: 14px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+}
+
+.about-toggle {
+  background: #f2f2f2;
+  color: #333;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+.about-toggle:hover {
+  background: #e4e4e4;
+}
+
+.about-content {
+  position: absolute;
+  top: 0;
+  right: 0;
+  transform: translateX(100%);
+  min-width: 260px;
+  background: #fff;
+  color: #333;
+  padding: 12px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.25s ease-in-out;
+}
+
+.about-content strong {
+  margin-bottom: -1em;
+  display: block;
+}
+
+.about-content p {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.about-content img {
+  margin-top: 1em;
+  width: 140px;
+  display: block;
+}
+
+.about-banner.open .about-content {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: all;
+}
+
+.about-banner.open .about-toggle {
+  background: #ddd;
+}
