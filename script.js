@@ -159,6 +159,16 @@ async function getCanonicalTitle(title) {
   return null;
 }
 
+const redirectCache = new Map();
+
+async function getCanonicalCached(title) {
+  const key = title.toLowerCase();
+  if (redirectCache.has(key)) return redirectCache.get(key);
+  const canonical = await getCanonicalTitle(title);
+  redirectCache.set(key, canonical);
+  return canonical;
+}
+
 // Check if a page exists on Wikipedia
 async function pageExists(title) {
   const canonical = await getCanonicalTitle(title);
@@ -213,15 +223,33 @@ async function bidirectionalSearch(startTitle, targetTitle, options={}) {
           });
         } catch { neighbors = []; }
         nodesExplored += 1;
-        for (const nb of neighbors) {
+        const batchSize = 15;
+        for (let start = 0; start < neighbors.length; start += batchSize) {
           if (stopRequested) break;
-          if (!visitedF.has(nb) && !blacklist.has(`${current}→${nb}`)) {
-            visitedF.add(nb);
-            prevF.set(nb, current);
-            depthF.set(nb, curDepth+1);
-            qF.push(nb);
-            if (visitedB.has(nb)) { meetNode = nb; log(`[+] Meeting node found: "${nb}"`); break; }
+        
+          const batch = neighbors.slice(start, start + batchSize);
+          const canonicalBatch = await Promise.all(batch.map(nb => getCanonicalCached(nb)));
+        
+          for (let i = 0; i < batch.length; i++) {
+            if (stopRequested) break;
+          
+            const next = canonicalBatch[i] || batch[i];
+          
+            if (!visitedF.has(next) && !blacklist.has(`${current}→${next}`)) {
+              visitedF.add(next);
+              prevF.set(next, current);
+              depthF.set(next, curDepth + 1);
+              qF.push(next);
+            
+              if (visitedB.has(next)) {
+                meetNode = next;
+                log(`[+] Meeting node found: "${next}"`);
+                break;
+              }
+            }
           }
+        
+          if (meetNode) break;
         }
       }
     } else {
@@ -291,7 +319,7 @@ async function verifyChain(chain) {
       const fromLower = canonicalFrom.toLowerCase();
       const toLower = canonicalTo.toLowerCase();
 
-      if (canonicalFrom.toLowerCase() === canonicalTo.toLowerCase()) {
+      if (fromLower === toLower) {
         log(`[i] Skipping self-link "${canonicalFrom}" → "${canonicalTo}"`);
         continue;
       }
@@ -305,22 +333,42 @@ async function verifyChain(chain) {
       });
 
       const normalizedNeighbors = neighbors.map(n => n.toLowerCase());
+      let confirmed = false;
 
       // Direct
-      if (normalizedNeighbors.includes(toLower)) continue;
+      if (normalizedNeighbors.includes(toLower)) {
+        confirmed = true;
+      }
 
       // Redirect
-      const redirectTarget = await getCanonicalTitle(to);
-      if (redirectTarget && normalizedNeighbors.includes(redirectTarget.toLowerCase())) {
-        log(`[i] "${canonicalFrom}" links to redirect target of "${canonicalTo}" (${redirectTarget})`);
-        continue;
+      if (!confirmed) {
+        const [redirectTargetFrom, redirectTargetTo] = await Promise.all([
+          getCanonicalTitle(from),
+          getCanonicalTitle(to)
+        ]);
+
+        if (normalizedNeighbors.includes(redirectTargetTo.toLowerCase())) {
+          log(`[i] "${canonicalFrom}" links (via redirect) to "${redirectTargetTo}"`);
+          confirmed = true;
+        } else {
+          for (const neighbor of normalizedNeighbors) {
+            const neighborRedirect = await getCanonicalTitle(neighbor);
+            if (neighborRedirect && neighborRedirect.toLowerCase() === redirectTargetTo.toLowerCase()) {
+              log(`[i] "${canonicalFrom}" links to "${neighbor}" which redirects to "${redirectTargetTo}"`);
+              confirmed = true;
+              break;
+            }
+          }
+        }
       }
 
       // Disambiguation
-      if (canonicalFrom.toLowerCase().includes('(disambiguation)')) {
+      if (!confirmed && canonicalFrom.toLowerCase().includes('(disambiguation)')) {
         log(`[i] Assuming disambiguation page link from "${canonicalFrom}" to "${canonicalTo}" is valid.`);
-        continue;
+        confirmed = true;
       }
+
+      if (confirmed) continue;
 
       log(`[!] Could not confirm link "${canonicalFrom}" → "${canonicalTo}"`);
       seenFaults.add(edgeKey);
@@ -334,7 +382,6 @@ async function verifyChain(chain) {
 
   return { valid: true };
 }
-
 
 // UI
 $('startBtn').addEventListener('click', async () => {
@@ -390,7 +437,7 @@ $('startBtn').addEventListener('click', async () => {
       log(`[!] Faulty connection detected: "${verification.from}" → "${verification.to}"`);
       blacklist.add(`${verification.from}→${verification.to}`);
       log(`[i] Retrying search excluding faulty edge...`);
-      res = await bidirectionalSearch(start, target, { maxDepth, maxNodes, blacklist });
+      res = await bidirectionalSearch(startCanonical, targetCanonical, { maxDepth, maxNodes, blacklist });
     }
 
     if (res.path) {
