@@ -42,7 +42,7 @@ function extractTitle(input) {
     const u = new URL(input);
     if (u.hostname.endsWith('wikipedia.org')) {
       const m = u.pathname.match(/^\/wiki\/(.+)$/);
-      if (m) return decodeURIComponent(m[1]).replace(/_/g, ' ');
+      if (m) input = decodeURIComponent(m[1]);
     }
   } catch (e) {
     // Not full url
@@ -102,7 +102,7 @@ async function fetchOutgoingLinks(title, maxPerPage = 500, options = {}) {
     if (!resp.ok) throw new Error(`Network error ${resp.status}`);
     const data = await resp.json();
     if (data.error) throw new Error(JSON.stringify(data.error));
-    const pages = data.query && data.query.pages;
+    const pages = data.query?.pages;
     if (pages) {
       for (const pid in pages) {
         const p = pages[pid];
@@ -113,11 +113,7 @@ async function fetchOutgoingLinks(title, maxPerPage = 500, options = {}) {
         }
       }
     }
-    if (data.continue && data.continue.plcontinue) {
-      plcontinue = data.continue.plcontinue;
-    } else {
-      plcontinue = null;
-    }
+    plcontinue = data.continue?.plcontinue || null;
     await new Promise(r => setTimeout(r, 50));
   } while (plcontinue && !stopRequested);
   return Array.from(results);
@@ -135,16 +131,12 @@ async function fetchIncomingLinks(title, maxPerPage = 500) {
     if (!resp.ok) throw new Error(`Network error ${resp.status}`);
     const data = await resp.json();
     if (data.error) throw new Error(JSON.stringify(data.error));
-    if (data.query && data.query.backlinks) {
+    if (data.query?.backlinks) {
       for (const bl of data.query.backlinks) {
         if (bl.title) results.add(bl.title);
       }
     }
-    if (data.continue && data.continue.blcontinue) {
-      blcontinue = data.continue.blcontinue;
-    } else {
-      blcontinue = null;
-    }
+    blcontinue = data.continue?.blcontinue || null;
     await new Promise(r => setTimeout(r, 50));
   } while (blcontinue && !stopRequested);
   return Array.from(results);
@@ -282,20 +274,36 @@ async function verifyChain(chain) {
   for (let i = 0; i < chain.length - 1; i++) {
     const from = chain[i];
     const to = chain[i + 1];
+    
     try {
-      const neighbors = await fetchOutgoingLinks(from, 500, {
-        includeInfobox: true, // lmao
+      const [canonicalFrom, canonicalTo] = await Promise.all([
+        getCanonicalTitle(from),
+        getCanonicalTitle(to)
+      ]);
+
+      if (!canonicalFrom || !canonicalTo) {
+        log(`[!] Missing canonical title for "${from}" or "${to}"`);
+        return { valid: false, index: i, from, to };
+      }
+
+      const neighbors = await fetchOutgoingLinks(canonicalFrom, 500, {
+        includeInfobox: true,
         includeNavbox: true
       });
-      if (!neighbors.includes(to)) {
-        // Faulty edge found
-        return { valid: false, index: i, from, to };
+
+      const normalizedTo = canonicalTo.toLowerCase();
+      const found = neighbors.some(nb => nb.toLowerCase() === normalizedTo);
+
+      if (!found) {
+        log(`[!] Could not confirm link "${canonicalFrom}" → "${canonicalTo}"`);
+        return { valid: false, index: i, from: canonicalFrom, to: canonicalTo };
       }
     } catch (err) {
       log(`[!] Error verifying link "${from}" → "${to}": ${err}`);
       return { valid: false, index: i, from, to };
     }
   }
+
   return { valid: true };
 }
 
