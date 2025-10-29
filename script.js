@@ -336,30 +336,49 @@ async function verifyChain(chain) {
       let confirmed = false;
 
       // Direct
-      if (normalizedNeighbors.includes(toLower)) {
+      if (normalizedNeighbors.includes(toLower)) confirmed = true;
+
+      // Disambiguation target
+      if (!confirmed && canonicalTo.toLowerCase().endsWith('(disambiguation)')) {
+        log(`[i] Allowing disambiguation target: "${canonicalTo}"`);
         confirmed = true;
       }
 
       // Redirect
       if (!confirmed) {
-        // If the target is a disambiguation page, allow
-        if (canonicalTo.toLowerCase().endsWith('(disambiguation)')) {
-          log(`[i] Allowing disambiguation target: "${canonicalTo}"`);
-          confirmed = true;
-        } else {
-          // redirects
-          for (const neighbor of normalizedNeighbors) {
-            const neighborRedirect = await getCanonicalCached(neighbor);
-            if (neighborRedirect && neighborRedirect.toLowerCase() === toLower) {
-              log(`[i] "${canonicalFrom}" links via redirect to "${canonicalTo}"`);
-              confirmed = true;
-              break;
-            }
+        for (const neighbor of normalizedNeighbors) {
+          const neighborRedirect = await getCanonicalCached(neighbor);
+          if (!neighborRedirect) continue;
+          const nLower = neighborRedirect.toLowerCase();
+          if (nLower === toLower) {
+            log(`[i] "${canonicalFrom}" links via redirect to "${canonicalTo}"`);
+            confirmed = true;
+            break;
+          }
+          if (nLower.includes(toLower) || toLower.includes(nLower)) {
+            log(`[i] "${canonicalFrom}" links to a variant/alias of "${canonicalTo}"`);
+            confirmed = true;
+            break;
           }
         }
       }
 
-      // Disambiguation
+      // Variant name
+      if (
+        !confirmed &&
+        (canonicalTo.includes('(') || canonicalFrom.includes('('))
+      ) {
+        const toBase = canonicalTo.replace(/\s*\(.*?\)\s*/g, '').toLowerCase();
+        const fromNeighborsNoParen = normalizedNeighbors.map(n =>
+          n.replace(/\s*\(.*?\)\s*/g, '')
+        );
+        if (fromNeighborsNoParen.includes(toBase)) {
+          log(`[i] Allowing parenthetical variant link: "${canonicalFrom}" → "${canonicalTo}"`);
+          confirmed = true;
+        }
+      }
+
+      // Disambiguation source
       if (!confirmed && canonicalFrom.toLowerCase().includes('(disambiguation)')) {
         log(`[i] Allowing disambiguation source: "${canonicalFrom}"`);
         confirmed = true;
@@ -379,7 +398,6 @@ async function verifyChain(chain) {
 
   return { valid: true };
 }
-
 
 // UI
 $('startBtn').addEventListener('click', async () => {
@@ -440,10 +458,18 @@ $('startBtn').addEventListener('click', async () => {
     }
 
     if (res.path) {
-      log(`\n=== Chain found (length ${res.length}) ===`);
-      resultEl.innerHTML = `<strong>Chain (length ${res.length}):</strong><br>` +
-        res.path.map((t,i)=>{ const href=`https://en.wikipedia.org/wiki/${encodeURIComponent(t.replace(/ /g,'_'))}`; return `<a href="${href}" target="_blank" rel="noopener noreferrer">${t}</a>`+(i<res.path.length-1?' → ':''); }).join(' ');
-      log(`Chain: ${res.path.join(' -> ')}`);
+      const cleanedPath = await normalizeChain(res.path);
+      const chainLength = cleanedPath.length - 1;
+        
+      log(`\n=== Chain found (length ${chainLength}) ===`);
+      resultEl.innerHTML = `<strong>Chain (length ${chainLength}):</strong><br>` +
+        cleanedPath.map((t, i) => {
+          const href = `https://en.wikipedia.org/wiki/${encodeURIComponent(t.replace(/ /g, '_'))}`;
+          return `<a href="${href}" target="_blank" rel="noopener noreferrer">${t}</a>` +
+                 (i < cleanedPath.length - 1 ? ' → ' : '');
+        }).join(' ');
+      
+      log(`Chain: ${cleanedPath.join(' -> ')}`);
       log(`Nodes visited (approx): ${res.visited || 'unknown'}`);
       $('meetNode').textContent = res.meet || '—';
     } else {
@@ -459,6 +485,54 @@ $('startBtn').addEventListener('click', async () => {
     updateStats('-', '-', '-', $('meetNode').textContent);
   }
 });
+
+async function normalizeChain(chain) {
+  const canonicalized = await Promise.all(chain.map(t => getCanonicalCached(t)));
+  const cleaned = [];
+  const seen = new Set();
+
+  for (let i = 0; i < chain.length; i++) {
+    const original = chain[i];
+    const canonical = canonicalized[i];
+    if (!canonical) continue;
+
+    const isRedirect = (canonical.toLowerCase() !== original.toLowerCase());
+
+    const redirectInfo = await getPageRedirectInfo(original);
+    const reallyRedirects = redirectInfo?.redirect === true;
+
+    if (reallyRedirects && cleaned.length && cleaned[cleaned.length - 1].toLowerCase() === canonical.toLowerCase()) {
+      continue;
+    }
+
+    if (seen.has(canonical.toLowerCase())) continue;
+
+    cleaned.push(canonical);
+    seen.add(canonical.toLowerCase());
+  }
+
+  return cleaned;
+}
+
+async function getPageRedirectInfo(title) {
+  const key = title.toLowerCase();
+  if (redirectCache.has(key)) return redirectCache.get(key);
+
+  try {
+    const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&redirects&format=json&origin=*`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const page = Object.values(data.query.pages)[0];
+
+    const isRedirect = !!page.redirect;
+    const target = data.query.redirects?.find(r => r.from === title)?.to || null;
+    const info = { redirect: isRedirect, target };
+    redirectCache.set(key, info);
+    return info;
+  } catch {
+    return { redirect: false, target: null };
+  }
+}
 
 // Enter to start
 ['source', 'target'].forEach(id => {
