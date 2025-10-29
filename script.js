@@ -178,11 +178,12 @@ async function pageExists(title) {
 // Bidirectional BFS main funct
 // - startTitle: source
 // - targetTitle: destination
-// - options: maxDepth, maxNodes, blacklist
+// - options: maxDepth, maxNodes, batchSize, blacklist
 async function bidirectionalSearch(startTitle, targetTitle, options={}) {
   stopRequested = false;
-  const maxDepth = options.maxDepth || 6;
-  const maxNodes = options.maxNodes || 2000;
+  const maxDepth = options.maxDepth;
+  const maxNodes = options.maxNodes;
+  const batchSize = options.batchSize;
   const blacklist = options.blacklist || new Set();
 
   if (startTitle.toLowerCase() === targetTitle.toLowerCase()) return { path: [startTitle], length: 0, meet: startTitle };
@@ -223,7 +224,6 @@ async function bidirectionalSearch(startTitle, targetTitle, options={}) {
           });
         } catch { neighbors = []; }
         nodesExplored += 1;
-        const batchSize = 15;
         for (let start = 0; start < neighbors.length; start += batchSize) {
           if (stopRequested) break;
         
@@ -392,8 +392,9 @@ $('startBtn').addEventListener('click', async () => {
 
   const rawSource = $('source').value;
   const rawTarget = $('target').value;
-  const maxDepth = Number($('maxDepth').value) || 6;
-  const maxNodes = Number($('maxNodes').value) || 2000;
+  const maxDepth = Number($('maxDepth').value);
+  const maxNodes = Number($('maxNodes').value);
+  const batchSize = Number($('batchSize').value);
 
   const start = extractTitle(rawSource);
   const target = extractTitle(rawTarget);
@@ -427,7 +428,7 @@ $('startBtn').addEventListener('click', async () => {
   startTime = Date.now();
 
   try {
-    let res = await bidirectionalSearch(startCanonical, targetCanonical, { maxDepth, maxNodes, blacklist });
+    let res = await bidirectionalSearch(startCanonical, targetCanonical, { maxDepth, maxNodes, batchSize, blacklist });
 
     while (res.path) {
       const verification = await verifyChain(res.path);
@@ -437,7 +438,7 @@ $('startBtn').addEventListener('click', async () => {
       log(`[!] Faulty connection detected: "${verification.from}" → "${verification.to}"`);
       blacklist.add(`${verification.from}→${verification.to}`);
       log(`[i] Retrying search excluding faulty edge...`);
-      res = await bidirectionalSearch(startCanonical, targetCanonical, { maxDepth, maxNodes, blacklist });
+      res = await bidirectionalSearch(startCanonical, targetCanonical, { maxDepth, maxNodes, batchSize, blacklist });
     }
 
     if (res.path) {
@@ -473,24 +474,33 @@ $('startBtn').addEventListener('click', async () => {
   });
 });
 
-function saveCheckboxPrefs() {
+function savePrefs() {
+  localStorage.setItem('maxDepth', $('maxDepth').value);
+  localStorage.setItem('maxNodes', $('maxNodes').value);
+  localStorage.setItem('batchSize', $('batchSize').value);
   localStorage.setItem('includeInfobox', $('includeInfobox').checked ? '1' : '0');
   localStorage.setItem('includeNavbox', $('includeNavbox').checked ? '1' : '0');
 }
 
-function restoreCheckboxPrefs() {
+function restorePrefs() {
+  const maxDepthPref = localStorage.getItem('maxDepth');
+  const maxNodesPref = localStorage.getItem('maxNodes');
+  const batchSizePref = localStorage.getItem('batchSize');
   const infoboxPref = localStorage.getItem('includeInfobox');
   const navboxPref = localStorage.getItem('includeNavbox');
+  if (maxDepthPref !== null) $('maxDepth').value = maxDepthPref;
+  if (maxNodesPref !== null) $('maxNodes').value = maxNodesPref;
+  if (batchSizePref !== null) $('batchSize').value = batchSizePref;
   if (infoboxPref !== null) $('includeInfobox').checked = infoboxPref === '1';
   if (navboxPref !== null) $('includeNavbox').checked = navboxPref === '1';
 }
 
-// Restore checkbox preferences when page loads
-document.addEventListener('DOMContentLoaded', restoreCheckboxPrefs);
+// Restore preferences when page loads
+document.addEventListener('DOMContentLoaded', restorePrefs);
 
-// Save checkbox preferences when user toggles
-['includeInfobox', 'includeNavbox'].forEach(id => {
-  $(id).addEventListener('change', saveCheckboxPrefs);
+// Save preferences on changes
+['includeInfobox','includeNavbox','maxDepth','maxNodes','batchSize'].forEach(id => {
+  $(id).addEventListener('change', savePrefs);
 });
 
 // Stop button

@@ -70,10 +70,11 @@
   </div>
 
   <div class="controls">
-    <label class="muted">Max depth (each side): <input id="maxDepth" type="number" value="6" min="1" style="width:72px; margin-left:6px;" /></label>
-    <label class="muted">Max nodes (total): <input id="maxNodes" type="number" value="2000" min="100" style="width:120px; margin-left:6px;" /></label>
-    <label class="muted"><input id="includeInfobox" type="checkbox" checked /> Include Infobox links</label>
-    <label class="muted"><input id="includeNavbox" type="checkbox" /> Include Navbox links</label>
+    <label class="muted" title="Maximum number of connects from each edge">Max depth (each side): <input id="maxDepth" type="number" value="6" min="1" style="width:2em; margin-left:6px;" /></label>
+    <label class="muted" title="Maximum number of articles fully searched">Max nodes (total): <input id="maxNodes" type="number" value="2000" min="100" style="width:4em; margin-left:6px;" /></label>
+    <label class="muted" title="Amount of API requests ran at the same time. Higher batch size means faster computation but a higher chance of being rate-limited by Wikipedia's API">Batch size: <input id="batchSize" type="number" value="15" min="1" style="width:3em; margin-left:6px;" /></label>
+    <label class="muted" title="Allow links in infoboxes"><input id="includeInfobox" type="checkbox" checked /> Include Infobox links</label>
+    <label class="muted" title="Allow links in navboxes"><input id="includeNavbox" type="checkbox" /> Include Navbox links</label>
     <button id="startBtn">Start search</button>
     <button id="stopBtn" disabled>Stop</button>
   </div>
