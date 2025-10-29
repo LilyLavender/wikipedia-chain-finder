@@ -274,7 +274,7 @@ async function verifyChain(chain) {
   for (let i = 0; i < chain.length - 1; i++) {
     const from = chain[i];
     const to = chain[i + 1];
-    
+
     try {
       const [canonicalFrom, canonicalTo] = await Promise.all([
         getCanonicalTitle(from),
@@ -395,6 +395,26 @@ $('startBtn').addEventListener('click', async () => {
       }
     }
   });
+});
+
+function saveCheckboxPrefs() {
+  localStorage.setItem('includeInfobox', $('includeInfobox').checked ? '1' : '0');
+  localStorage.setItem('includeNavbox', $('includeNavbox').checked ? '1' : '0');
+}
+
+function restoreCheckboxPrefs() {
+  const infoboxPref = localStorage.getItem('includeInfobox');
+  const navboxPref = localStorage.getItem('includeNavbox');
+  if (infoboxPref !== null) $('includeInfobox').checked = infoboxPref === '1';
+  if (navboxPref !== null) $('includeNavbox').checked = navboxPref === '1';
+}
+
+// Restore checkbox preferences when page loads
+document.addEventListener('DOMContentLoaded', restoreCheckboxPrefs);
+
+// Save checkbox preferences when user toggles
+['includeInfobox', 'includeNavbox'].forEach(id => {
+  $(id).addEventListener('change', saveCheckboxPrefs);
 });
 
 // Stop button
