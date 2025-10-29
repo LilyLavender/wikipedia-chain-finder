@@ -271,6 +271,8 @@ async function bidirectionalSearch(startTitle, targetTitle, options={}) {
 
 // Verifies that the half of a chain after the meeting node actually connects going forward (may need work)
 async function verifyChain(chain) {
+  const seenFaults = new Set();
+
   for (let i = 0; i < chain.length - 1; i++) {
     const from = chain[i];
     const to = chain[i + 1];
@@ -286,18 +288,44 @@ async function verifyChain(chain) {
         return { valid: false, index: i, from, to };
       }
 
+      const fromLower = canonicalFrom.toLowerCase();
+      const toLower = canonicalTo.toLowerCase();
+
+      if (canonicalFrom.toLowerCase() === canonicalTo.toLowerCase()) {
+        log(`[i] Skipping self-link "${canonicalFrom}" → "${canonicalTo}"`);
+        continue;
+      }
+
+      const edgeKey = `${fromLower}→${toLower}`;
+      if (seenFaults.has(edgeKey)) continue;
+
       const neighbors = await fetchOutgoingLinks(canonicalFrom, 500, {
         includeInfobox: true,
         includeNavbox: true
       });
 
-      const normalizedTo = canonicalTo.toLowerCase();
-      const found = neighbors.some(nb => nb.toLowerCase() === normalizedTo);
+      const normalizedNeighbors = neighbors.map(n => n.toLowerCase());
 
-      if (!found) {
-        log(`[!] Could not confirm link "${canonicalFrom}" → "${canonicalTo}"`);
-        return { valid: false, index: i, from: canonicalFrom, to: canonicalTo };
+      // Direct
+      if (normalizedNeighbors.includes(toLower)) continue;
+
+      // Redirect
+      const redirectTarget = await getCanonicalTitle(to);
+      if (redirectTarget && normalizedNeighbors.includes(redirectTarget.toLowerCase())) {
+        log(`[i] "${canonicalFrom}" links to redirect target of "${canonicalTo}" (${redirectTarget})`);
+        continue;
       }
+
+      // Disambiguation
+      if (canonicalFrom.toLowerCase().includes('(disambiguation)')) {
+        log(`[i] Assuming disambiguation page link from "${canonicalFrom}" to "${canonicalTo}" is valid.`);
+        continue;
+      }
+
+      log(`[!] Could not confirm link "${canonicalFrom}" → "${canonicalTo}"`);
+      seenFaults.add(edgeKey);
+      return { valid: false, index: i, from: canonicalFrom, to: canonicalTo };
+
     } catch (err) {
       log(`[!] Error verifying link "${from}" → "${to}": ${err}`);
       return { valid: false, index: i, from, to };
@@ -306,6 +334,7 @@ async function verifyChain(chain) {
 
   return { valid: true };
 }
+
 
 // UI
 $('startBtn').addEventListener('click', async () => {
