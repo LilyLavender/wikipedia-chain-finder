@@ -79,6 +79,39 @@ footer {
   width: fit-content;
 }
 
+.input-pair {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 2em;
+  flex-wrap: wrap;
+}
+
+.input-pair > button {
+  flex: 0 0 auto;
+}
+
+.input-pair > div {
+  flex: 1 1 0;
+}
+
+#swapBtn {
+  align-self: center;
+  padding: 1em;
+  font-size: 20px;
+  border: none;
+  background: #f2f2f2;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 1em;
+  margin-right: 2em;
+}
+
+#swapBtn:hover {
+  background: #e0e0e0;
+}
+
 /* ABOUT */
 .about-banner {
   position: fixed;

@@ -50,11 +50,21 @@
     </p>
   </div>
 
-  <label for="source">Source article</label>
-  <input id="source" type="text" placeholder="e.g. Hatsune Miku" />
+  <div class="input-pair">
+    <div>
+      <div class="input-group">
+        <label for="source">Source article</label>
+        <input id="source" type="text" placeholder="e.g. Hatsune Miku" />
+      </div>
 
-  <label for="target">Destination article</label>
-  <input id="target" type="text" placeholder="e.g. https://en.wikipedia.org/wiki/Great_Pyramid_of_Giza" />
+      <div class="input-group">
+        <label for="target">Destination article</label>
+        <input id="target" type="text" placeholder="e.g. https://en.wikipedia.org/wiki/Great_Pyramid_of_Giza" />
+      </div>
+    </div>
+
+    <button id="swapBtn" title="Swap" aria-label="Swap source and destination">↔</button>
+  </div>
 
   <div class="controls">
     <label class="muted">Max depth (each side): <input id="maxDepth" type="number" value="6" min="1" style="width:72px; margin-left:6px;" /></label>

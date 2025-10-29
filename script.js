@@ -425,6 +425,15 @@ $('stopBtn').addEventListener('click', () => {
   $('startBtn').disabled = false;
 });
 
+// Swap button
+$('swapBtn').addEventListener('click', () => {
+  const sourceEl = $('source');
+  const targetEl = $('target');
+  const tmp = sourceEl.value;
+  sourceEl.value = targetEl.value;
+  targetEl.value = tmp;
+});
+
 // About banner toggle
 document.addEventListener("DOMContentLoaded", () => {
   const banner = $('aboutBanner');
