@@ -307,8 +307,8 @@ async function verifyChain(chain) {
 
     try {
       const [canonicalFrom, canonicalTo] = await Promise.all([
-        getCanonicalTitle(from),
-        getCanonicalTitle(to)
+        getCanonicalCached(from),
+        getCanonicalCached(to)
       ]);
 
       if (!canonicalFrom || !canonicalTo) {
@@ -342,19 +342,16 @@ async function verifyChain(chain) {
 
       // Redirect
       if (!confirmed) {
-        const [redirectTargetFrom, redirectTargetTo] = await Promise.all([
-          getCanonicalTitle(from),
-          getCanonicalTitle(to)
-        ]);
-
-        if (normalizedNeighbors.includes(redirectTargetTo.toLowerCase())) {
-          log(`[i] "${canonicalFrom}" links (via redirect) to "${redirectTargetTo}"`);
+        // If the target is a disambiguation page, allow
+        if (canonicalTo.toLowerCase().endsWith('(disambiguation)')) {
+          log(`[i] Allowing disambiguation target: "${canonicalTo}"`);
           confirmed = true;
         } else {
+          // redirects
           for (const neighbor of normalizedNeighbors) {
-            const neighborRedirect = await getCanonicalTitle(neighbor);
-            if (neighborRedirect && neighborRedirect.toLowerCase() === redirectTargetTo.toLowerCase()) {
-              log(`[i] "${canonicalFrom}" links to "${neighbor}" which redirects to "${redirectTargetTo}"`);
+            const neighborRedirect = await getCanonicalCached(neighbor);
+            if (neighborRedirect && neighborRedirect.toLowerCase() === toLower) {
+              log(`[i] "${canonicalFrom}" links via redirect to "${canonicalTo}"`);
               confirmed = true;
               break;
             }
@@ -364,7 +361,7 @@ async function verifyChain(chain) {
 
       // Disambiguation
       if (!confirmed && canonicalFrom.toLowerCase().includes('(disambiguation)')) {
-        log(`[i] Assuming disambiguation page link from "${canonicalFrom}" to "${canonicalTo}" is valid.`);
+        log(`[i] Allowing disambiguation source: "${canonicalFrom}"`);
         confirmed = true;
       }
 
@@ -382,6 +379,7 @@ async function verifyChain(chain) {
 
   return { valid: true };
 }
+
 
 // UI
 $('startBtn').addEventListener('click', async () => {
