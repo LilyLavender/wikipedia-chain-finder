@@ -21,6 +21,7 @@ function resetUI() {
   $('meetNode').textContent = '—';
   $('elapsed').textContent = '0s';
   blacklist.clear();
+  updateFaviconDefault();
 }
 
 function elapsedSeconds() {
@@ -498,6 +499,8 @@ $('startBtn').addEventListener('click', async () => {
       res = await bidirectionalSearch(startCanonical, targetCanonical, { maxDepth, maxNodes, batchSize, blacklist });
     }
 
+    updateFaviconAlert();
+
     if (res.path) {
       const cleanedPath = await normalizeChain(res.path);
       const chainLength = cleanedPath.length - 1;
@@ -678,3 +681,17 @@ document.querySelectorAll('.openBtn').forEach(btn => {
     window.open(url, '_blank', 'noopener');
   });
 });
+
+// Favicon
+const favicon16 = document.querySelector("link[rel='icon'][sizes='16x16']");
+const favicon32 = document.querySelector("link[rel='icon'][sizes='32x32']");
+
+function updateFaviconDefault() {
+  favicon16.href = "./favicon-16x16.png";
+  favicon32.href = "./favicon-32x32.png";
+}
+
+function updateFaviconAlert() {
+  favicon16.href = "./favicon-16x16-alert.png";
+  favicon32.href = "./favicon-32x32-alert.png";
+}
