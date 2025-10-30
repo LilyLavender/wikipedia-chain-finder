@@ -28,6 +28,7 @@
   <link rel="manifest" href="./site.webmanifest">
 
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
   <header class="about-banner" id="aboutBanner">
@@ -57,12 +58,28 @@
     <div>
       <div class="input-group">
         <label for="source">Source article</label>
-        <input id="source" type="text" placeholder="e.g. Hatsune Miku" />
+        <div class="input-wrapper">
+          <input id="source" type="text" placeholder="e.g. Hatsune Miku" />
+          <button class="iconBtn randomBtn" data-target="source" title="Random article">
+            <i class="fa-solid fa-dice"></i>
+          </button>
+          <button class="iconBtn openBtn" data-target="source" title="Open in a new tab">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+          </button>
+        </div>
       </div>
 
       <div class="input-group">
         <label for="target">Destination article</label>
-        <input id="target" type="text" placeholder="e.g. https://en.wikipedia.org/wiki/Great_Pyramid_of_Giza" />
+        <div class="input-wrapper">
+          <input id="target" type="text" placeholder="e.g. https://en.wikipedia.org/wiki/Great_Pyramid_of_Giza" />
+          <button class="iconBtn randomBtn" data-target="target" title="Random article">
+            <i class="fa-solid fa-dice"></i>
+          </button>
+          <button class="iconBtn openBtn" data-target="target" title="Open in a new tab">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+          </button>
+        </div>
       </div>
     </div>
 

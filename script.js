@@ -646,3 +646,35 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!banner.contains(e.target)) banner.classList.remove("open");
   });
 });
+
+async function getRandomWikiTitle() {
+  const url = "https://en.wikipedia.org/w/api.php?action=query&list=random&rnnamespace=0&rnlimit=1&format=json&origin=*";
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`Network error ${resp.status}`);
+  const data = await resp.json();
+  return data.query.random[0].title;
+}
+
+// Random buttons
+document.querySelectorAll('.randomBtn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const targetId = btn.dataset.target;
+    try {
+      const title = await getRandomWikiTitle();
+      document.getElementById(targetId).value = title;
+    } catch (err) {
+      alert('Failed to fetch random article: ' + err);
+    }
+  });
+});
+
+// Open buttons
+document.querySelectorAll('.openBtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const targetId = btn.dataset.target;
+    const title = document.getElementById(targetId).value.trim();
+    if (!title) return;
+    const url = title.startsWith('http') ? title : `https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g,'_'))}`;
+    window.open(url, '_blank', 'noopener');
+  });
+});
