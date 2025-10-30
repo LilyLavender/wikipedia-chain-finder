@@ -169,6 +169,47 @@ async function getCanonicalCached(title) {
   return canonical;
 }
 
+async function getCanonicalsBatch(titles) {
+  // Remove duplicates and already cached
+  const uncached = titles.filter(t => !redirectCache.has(t.toLowerCase()));
+  if (uncached.length === 0) {
+    return titles.map(t => redirectCache.get(t.toLowerCase()) || t);
+  }
+
+  const results = new Map();
+  const CHUNK = 50; // API supports up to 50 titles at once
+  for (let i = 0; i < uncached.length; i += CHUNK) {
+    const batch = uncached.slice(i, i + CHUNK);
+    const url = `${apiEndpoint}&action=query&titles=${batch.map(encodeURIComponent).join('|')}&redirects=1`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`Network error ${resp.status}`);
+    const data = await resp.json();
+
+    if (data.query && data.query.pages) {
+      for (const page of Object.values(data.query.pages)) {
+        results.set(page.title.toLowerCase(), page.missing ? null : page.title);
+      }
+    }
+    // Cache redirects
+    if (data.query?.redirects) {
+      for (const r of data.query.redirects) {
+        results.set(r.from.toLowerCase(), r.to);
+      }
+    }
+  }
+
+  for (const [k,v] of results) redirectCache.set(k,v);
+
+  // Return IN INPUT ORDER
+  return titles.map(t => redirectCache.get(t.toLowerCase()) || t);
+}
+
+async function fetchOutgoingLinksBatch(titles, options={}) {
+  const promises = titles.map(t => fetchOutgoingLinks(t, 500, options).catch(() => []));
+  const results = await Promise.allSettled(promises);
+  return results.map(r => r.status === 'fulfilled' ? r.value : []);
+}
+
 // Check if a page exists on Wikipedia
 async function pageExists(title) {
   const canonical = await getCanonicalTitle(title);
@@ -226,10 +267,10 @@ async function bidirectionalSearch(startTitle, targetTitle, options={}) {
         nodesExplored += 1;
         for (let start = 0; start < neighbors.length; start += batchSize) {
           if (stopRequested) break;
-        
+
           const batch = neighbors.slice(start, start + batchSize);
-          const canonicalBatch = await Promise.all(batch.map(nb => getCanonicalCached(nb)));
-        
+          const canonicalBatch = await getCanonicalsBatch(batch);
+          
           for (let i = 0; i < batch.length; i++) {
             if (stopRequested) break;
           
@@ -248,7 +289,7 @@ async function bidirectionalSearch(startTitle, targetTitle, options={}) {
               }
             }
           }
-        
+
           if (meetNode) break;
         }
       }
